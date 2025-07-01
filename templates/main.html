@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>College Admission Interviewer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #1a202c;
+            /* Dark background */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 550px;
+            /* Slightly wider container */
+            background: #2d3748;
+            /* Darker container background */
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            padding: 25px;
+            /* More padding */
+            color: #edf2f7;
+            /* Light text color */
+        }
+
+        h2 {
+            text-align: center;
+            color: #63b3ed;
+            /* Blue heading */
+            margin-bottom: 25px;
+            font-size: 1.8em;
+            /* Larger heading */
+        }
+
+        #chat {
+            background: #1a202c;
+            /* Chat background matches body */
+            border-radius: 8px;
+            padding: 15px;
+            height: 380px;
+            /* Taller chat window */
+            overflow-y: auto;
+            font-size: 1em;
+            margin-bottom: 20px;
+            border: 1px solid #4a5568;
+            /* Subtle border */
+        }
+
+        .message {
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .user {
+            color: #90cdf4;
+            /* Lighter blue for user messages */
+            text-align: right;
+            /* User messages on the right */
+            margin-left: 20%;
+            /* Keep user messages from spanning full width */
+        }
+
+        .bot {
+            color: #e2e8f0;
+            /* Off-white for bot messages */
+            text-align: left;
+            /* Bot messages on the left */
+            margin-right: 20%;
+            /* Keep bot messages from spanning full width */
+        }
+
+        .bot b,
+        .user b {
+            display: block;
+            /* Sender name on its own line */
+            font-size: 0.9em;
+            margin-bottom: 4px;
+        }
+
+        .system {
+            color: #a0aec0;
+            /* Grey for system messages */
+            text-align: center;
+            font-style: italic;
+        }
+
+        .buffering {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Center the buffering message */
+            margin-top: 15px;
+            color: #63b3ed;
+            font-size: 0.95em;
+        }
+
+        .spinner {
+            border: 3px solid #4a5568;
+            border-top: 3px solid #63b3ed;
+            border-radius: 50%;
+            width: 20px;
+            /* Slightly larger spinner */
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        #controls {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            /* Increased gap between buttons */
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 15px;
+            /* More padding for buttons */
+            background: #3182ce;
+            /* Primary blue button */
+            border: none;
+            border-radius: 8px;
+            /* Slightly more rounded corners */
+            color: white;
+            font-size: 1.05em;
+            /* Slightly larger font */
+            cursor: pointer;
+            transition: background 0.2s ease-in-out, transform 0.1s ease-in-out;
+            white-space: nowrap;
+            /* Prevent text wrapping */
+        }
+
+        button:hover:not(:disabled) {
+            background: #2b6cb0;
+            /* Darker blue on hover */
+            transform: translateY(-1px);
+            /* Slight lift on hover */
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+            /* Press effect */
+        }
+
+        button:disabled {
+            background: #4a5568;
+            /* Greyed out when disabled */
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        #save-close-btn {
+            background: #e53e3e;
+            /* Red for save/close */
+        }
+
+        #save-close-btn:hover:not(:disabled) {
+            background: #c53030;
+        }
+
+        #record-btn {
+            background: #63b3ed;
+            /* Lighter blue for mic button */
+            font-size: 1.5em;
+            /* Larger icon */
+            padding: 8px 15px;
+            /* Adjust padding for icon */
+        }
+
+        #record-btn:hover:not(:disabled) {
+            background: #4299e1;
+        }
+
+        #recording-status {
+            text-align: center;
+            font-size: 0.95em;
+            margin-top: 15px;
+            /* More space above status */
+            color: #90cdf4;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>College Interview Simulator</h2>
+        <div id="chat"></div>
+        <div id="recording-status">Click "Start Interview" to begin your practice.</div>
+        <div id="controls">
+            <button id="save-close-btn">Save and Close</button>
+            <button id="start-btn">Start Interview</button>
+            <button id="record-btn" disabled>🎙️</button>
+            <button id="send-btn" style="display:none;">Send</button>
+            <!-- Add this to your main.html, perhaps in a header or user menu -->
+            <button id="save-close-btn" onclick="window.location.href='/logout'">Logout</button>
+        </div>
+    </div>
+
+    <script>
+        const chat = document.getElementById('chat');
+        const recordBtn = document.getElementById('record-btn');
+        const startBtn = document.getElementById('start-btn');
+        const sendBtn = document.getElementById('send-btn');
+        const saveCloseBtn = document.getElementById('save-close-btn');
+        const recordingStatus = document.getElementById('recording-status');
+
+        let mediaRecorder, audioChunks = [], botAudioBlob = null;
+        let isRecording = false; // Tracks if user is currently recording
+        let isMicEnabled = false; // Tracks if mic is generally enabled (pause/resume)
+        let bufferingElem = null;
+        let recordingTimeout = null; // To stop recording after a set time
+
+        // --- Helper Functions ---
+
+        function appendMessage(sender, text, senderClass) {
+            const div = document.createElement('div');
+            div.className = `message ${senderClass}`;
+            div.innerHTML = `<b>${sender}:</b> ${text}`;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight; // Scroll to bottom
+        }
+
+        function showBuffering() {
+            hideBuffering(); // Ensure only one buffering message exists
+            bufferingElem = document.createElement('div');
+            bufferingElem.className = 'buffering';
+            bufferingElem.innerHTML = `<div class="spinner"></div><span>The interviewer is thinking...</span>`;
+            chat.appendChild(bufferingElem);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function hideBuffering() {
+            if (bufferingElem) {
+                chat.removeChild(bufferingElem);
+                bufferingElem = null;
+            }
+        }
+
+        // Modified to keep saveCloseBtn always enabled unless it's the one being clicked
+        // And now, the record button's state is handled more specifically
+        function setControlsState(start, send) {
+            startBtn.disabled = start;
+            sendBtn.disabled = send;
+            // recordBtn's disabled state is managed by isMicEnabled and microphone access
+            // saveCloseBtn's disabled state is managed ONLY by its own click handler
+        }
+
+        // --- Core Communication Logic ---
+
+        async function sendAudioToBackend(audioBlob, fileName = 'input.webm') {
+            setControlsState(true, true); // Disable start, send
+            // Keep recordBtn enabled here, unless mic access failed
+            if (isMicEnabled) {
+                recordBtn.disabled = false; // Keep mic button active for pause/resume
+            } else {
+                // If mic was explicitly paused by user, keep it paused
+                recordBtn.disabled = false; // Still enable it for toggling
+                recordBtn.textContent = '🎙️';
+            }
+            showBuffering();
+
+            const formData = new FormData();
+            formData.append('audio', audioBlob, fileName);
+
+            try {
+                const res = await fetch('/speech', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    throw new Error(`HTTP error! Status: ${res.status}`);
+                }
+
+                const data = await res.json();
+                hideBuffering();
+
+                if (data.user_text) {
+                    appendMessage('You', data.user_text, 'user');
+                }
+                appendMessage('Interviewer', data.reply_text, 'bot');
+
+                if (data.reply_audio_url) {
+                    botAudioBlob = await (await fetch(data.reply_audio_url)).blob();
+                    const audio = new Audio(URL.createObjectURL(botAudioBlob));
+                    audio.play();
+
+                    audio.onended = () => {
+                        // After bot finishes speaking
+                        if (isMicEnabled) {
+                            startAutomaticRecording(); // Try to restart recording
+                            recordBtn.textContent = '⏸️'; // Ensure pause icon is shown
+                        } else {
+                            recordingStatus.textContent = "Mic is paused. Click 🎙️ to resume.";
+                            recordBtn.textContent = '🎙️'; // Ensure mic icon is shown
+                            recordBtn.disabled = false; // Ensure button is clickable to resume
+                        }
+                        setControlsState(true, true); // Ensure start/send remain disabled
+                    };
+                } else {
+                    // If no audio reply, immediately prepare for user input
+                    if (isMicEnabled) {
+                        startAutomaticRecording();
+                        recordBtn.textContent = '⏸️'; // Ensure pause icon is shown
+                    } else {
+                        recordingStatus.textContent = "Mic is paused. Click 🎙️ to resume.";
+                        recordBtn.textContent = '🎙️'; // Ensure mic icon is shown
+                        recordBtn.disabled = false; // Ensure button is clickable to resume
+                    }
+                    setControlsState(true, true); // Ensure start/send remain disabled
+                }
+            } catch (err) {
+                console.error('Error communicating with backend:', err);
+                hideBuffering();
+                appendMessage('System', 'Oops! Something went wrong communicating with the interviewer. Please try again.', 'system');
+                setControlsState(false, true); // Re-enable start, send
+                if (isMicEnabled) {
+                    recordBtn.disabled = false; // Keep mic button active for troubleshooting
+                } else {
+                    recordBtn.textContent = '🚫'; // Show error if mic was initially disabled or errored
+                    recordBtn.disabled = true; // Permanently disable if mic access failed
+                }
+                startBtn.textContent = 'Retry Interview';
+                startBtn.style.background = '#3182ce';
+                startBtn.style.display = 'inline-block';
+            }
+        }
+
+        // --- Recording Functions ---
+
+        async function startAutomaticRecording() {
+            // Prevent multiple recordings or if mic is generally disabled
+            if (!isMicEnabled || isRecording) {
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+
+                mediaRecorder.onstop = async () => {
+                    isRecording = false;
+                    recordBtn.classList.remove('recording'); // Remove visual feedback
+                    clearTimeout(recordingTimeout); // Clear any pending timeout
+
+                    // Only send audio if mic was enabled when recording stopped (i.e., not paused by user during recording)
+                    if (isMicEnabled) { // Only send if user wants mic active
+                        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                        recordingStatus.textContent = "Processing your response...";
+                        await sendAudioToBackend(blob, 'input.webm'); // Send recorded user audio
+                    } else {
+                        // Mic was paused during recording, so don't send data, just reset state
+                        recordingStatus.textContent = "Mic is paused. Click 🎙️ to resume.";
+                        recordBtn.textContent = '🎙️'; // Show mic icon
+                        recordBtn.disabled = false; // Ensure button is clickable to resume
+                        setControlsState(true, true); // Ensure start/send remain disabled
+                    }
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                recordBtn.classList.add('recording'); // Add visual feedback for recording
+                recordBtn.textContent = '⏹️'; // Change icon to indicate recording is active
+                recordingStatus.textContent = "Listening... (up to 6 seconds)";
+
+                // Set a timeout to automatically stop recording after 6 seconds
+                recordingTimeout = setTimeout(() => {
+                    if (mediaRecorder && mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                    }
+                }, 6000); // Stop after 6 seconds
+            } catch (err) {
+                console.error('Microphone access error:', err);
+                appendMessage('System', 'Could not access your microphone. Please enable it or refresh the page.', 'system');
+                setControlsState(false, true); // Enable start button
+                recordBtn.textContent = '🚫'; // Indicate mic error
+                recordBtn.disabled = true; // Permanently disable mic button if access fails
+                recordingStatus.textContent = "Microphone access denied or unavailable.";
+                isMicEnabled = false; // Mark mic as disabled
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            }
+            if (recordingTimeout) {
+                clearTimeout(recordingTimeout);
+                recordingTimeout = null;
+            }
+        }
+
+        // --- Event Listeners ---
+
+        startBtn.onclick = async () => {
+            setControlsState(true, true); // Disable start, send
+            recordBtn.disabled = true; // Temporarily disable mic button during initial fetch
+            startBtn.textContent = 'Starting Interview';
+            startBtn.style.background = '#4a5568';
+            startBtn.disabled = true;
+
+            appendMessage('System', 'Starting your interview...', 'system');
+
+            try {
+                const res = await fetch('/initiate', { method: 'POST' });
+                if (!res.ok) throw new Error('Failed to fetch silence.wav from backend.');
+                const data = await res.json();
+                appendMessage('Interviewer', data.reply_text, 'bot')
+                if (data.reply_audio_url) {
+                    botAudioBlob = await (await fetch(data.reply_audio_url)).blob();
+                    const audio = new Audio(URL.createObjectURL(botAudioBlob));
+                    audio.play();
+                    audio.onended = () => {
+                        isMicEnabled = true;
+                        recordBtn.textContent = '⏸️';
+                        recordBtn.disabled = false;
+                        startAutomaticRecording();
+                    };
+                } else {
+                    // Fallback if no audio
+                    isMicEnabled = true;
+                    recordBtn.textContent = '⏸️';
+                    recordBtn.disabled = false;
+                    startAutomaticRecording();
+                }
+
+                isMicEnabled = true; // Mic is now generally enabled
+                recordBtn.textContent = '⏸️'; // Show pause icon immediately
+                recordBtn.disabled = false; // Enable mic button after successful start
+                startBtn.style.display = 'none'; // Hide start button
+            } catch (err) {
+                console.error("Error starting interview:", err);
+                appendMessage('System', 'Could not start the interview. Please check your connection and refresh.', 'system');
+                setControlsState(false, true); // Re-enable start, send
+                recordBtn.disabled = true; // Keep mic disabled on error
+                startBtn.textContent = 'Start Interview';
+                startBtn.style.background = '#3182ce';
+                startBtn.disabled = false;
+            }
+        };
+
+        recordBtn.onclick = () => {
+            // Only toggle mic state if it hasn't been permanently disabled by a mic access error
+            if (recordBtn.disabled && recordBtn.textContent === '🚫') {
+                return; // Do nothing if mic is permanently errored
+            }
+
+            isMicEnabled = !isMicEnabled; // Toggle mic state
+
+            if (isMicEnabled) {
+                recordBtn.textContent = '⏸️'; // Show pause icon
+                recordingStatus.textContent = "Mic resumed. Waiting for interviewer's response, then will listen.";
+                // If the bot isn't speaking and we're not currently recording, try to start a new recording
+                if (!bufferingElem && !isRecording) {
+                    startAutomaticRecording();
+                }
+                // No need to setControlsState here, only change mic icon/status
+            } else {
+                recordBtn.textContent = '🎙️'; // Show mic icon
+                recordingStatus.textContent = "Mic is paused. Click 🎙️ to resume.";
+                stopRecording(); // Stop any active recording
+                // No need to setControlsState here, only change mic icon/status
+            }
+            // Ensure mic button itself is never disabled by this click handler
+            recordBtn.disabled = false;
+        };
+
+        saveCloseBtn.onclick = async () => {
+            // Disable all interactive elements
+            setControlsState(true, true); // Disable start, send
+            recordBtn.disabled = true; // Ensure mic is definitely off
+            isMicEnabled = false; // Ensure mic is flagged as off
+            stopRecording(); // Stop any active recording immediately
+
+            saveCloseBtn.disabled = true; // Disable save button *during* save operation
+            saveCloseBtn.textContent = 'Saving...';
+            saveCloseBtn.style.background = '#c53030';
+
+            appendMessage('System', 'Saving interview details and closing session...', 'system');
+
+            try {
+                await fetch('/cleanup', { method: 'POST' });
+                appendMessage('System', 'Interview saved and session closed. Please refresh the page to start a new practice session.', 'system');
+                saveCloseBtn.textContent = 'Interview Saved and Closed';
+            } catch (err) {
+                console.error('Error saving chat:', err);
+                appendMessage('System', 'Failed to save the interview. Please try again or contact support.', 'system');
+                saveCloseBtn.disabled = false; // Re-enable if error occurs during save
+                saveCloseBtn.textContent = 'Save and Close';
+                saveCloseBtn.style.background = '#e53e3e';
+            }
+        };
+
+        // Initial state setup
+        setControlsState(false, true); // startBtn enabled, sendBtn disabled
+        recordBtn.disabled = true; // mic button initially disabled
+        saveCloseBtn.disabled = false; // save/close button initially enabled
+    </script>
+</body>
+
+</html>

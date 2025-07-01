@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login / Register</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #1a202c;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #edf2f7;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+            background: #2d3748;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #63b3ed;
+            margin-bottom: 25px;
+            font-size: 1.8em;
+        }
+
+        .flash-messages {
+            list-style-type: none;
+            padding: 0;
+            margin: 0 0 15px 0;
+        }
+
+        .flash-messages li {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 0.95em;
+        }
+
+        .flash-messages .error {
+            background-color: #c53030;
+            color: white;
+        }
+
+        .flash-messages .success {
+            background-color: #2f855a;
+            color: white;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            padding: 12px;
+            border: 1px solid #4a5568;
+            border-radius: 8px;
+            font-size: 1em;
+            background: #1a202c;
+            color: #edf2f7;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #63b3ed;
+        }
+
+        input::placeholder {
+            color: #a0aec0;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        button {
+            flex-grow: 1;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1.05em;
+            cursor: pointer;
+            transition: background 0.2s ease-in-out, transform 0.1s ease-in-out;
+        }
+
+        button[name="action"][value="login"] {
+            background: #3182ce;
+        }
+
+        button[name="action"][value="login"]:hover {
+            background: #2b6cb0;
+            transform: translateY(-1px);
+        }
+
+        button[name="action"][value="register"] {
+            background: #38a169;
+        }
+
+        button[name="action"][value="register"]:hover {
+            background: #2f855a;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Welcome</h2>
+
+        <!-- Flash messages will appear here -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <ul class=flash-messages>
+            {% for category, message in messages %}
+            <li class="{{ category }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% endwith %}
+
+        <!-- The form now posts to /auth -->
+        <form action="{{ url_for('auth') }}" method="post">
+            <input name="username" placeholder="Username" type="text" required>
+            <input name="password" placeholder="Password" type="password" required>
+            <div class="button-group">
+                <!-- Buttons specify the action (login or register) -->
+                <button type="submit" name="action" value="login">Login</button>
+                <button type="submit" name="action" value="register">Register</button>
+            </div>
+        </form>
+    </div>
+</body>
+
+</html>
