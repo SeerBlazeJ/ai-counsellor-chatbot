@@ -217,18 +217,18 @@ async def start_chat():
     finally:
         db._disconnect()
 
-    initiate_prompt = f"Hi {session.get('username')}, how may I help you today?"
+    initiate_prompt = "You are now connected to a new user, you may start the conversation now"
     if data_rows and data_rows[0]['info_json']:
         try:
             decrypted_data = fernet.decrypt(data_rows[0]['info_json']).decode('utf-8')
             user_info = json.loads(decrypted_data)
-            initiate_prompt = f"You're connected to an existing user: {session.get('username')}. Current info: {user_info}. Your tone should be warm and friendly. Start with a personalized, professional greeting. Do not list all details unless necessary. Begin."
+            initiate_prompt = f"You're connected to an existing user: {session.get('username')}. Current info: {user_info}. Your tone should be warm and friendly. Start with a personalized, professional greeting. Do not list all details unless necessary or asked by the user. Start by asking something like, 'hello, {session.get('username')}, how may I help you today?'. There is a high chance that the user is here to get some specific information updated, so, based on the response of the user, you should gather the necessary data and the data that you don't have instead of startiung the interview from scratch."
         except Exception as e:
             print(f"Error decrypting data for user {user_id}: {e}")
-            initiate_prompt = f"Hi {session.get('username')}, I had some trouble retrieving your previous information, but I'm here to help. How can I assist you today?"
+            initiate_prompt = f"There was an error fetching the data, you may start by sayin : Hi {session.get('username')}, I had some trouble retrieving your previous information, but I'm here to help. How can I assist you today?"
             
     conversation_history = session.get('conversation_history', [])
-    prompt = [{'role' : 'system', 'content' : admin_prompt}, {'role' : 'user', 'content' : initiate_prompt}]
+    prompt = [{'role' : 'system', 'content' : admin_prompt + initiate_prompt}]
     
     try:
         payload = {'model': OLLAMA_MODEL, 'messages': prompt, 'stream': False}
@@ -379,7 +379,7 @@ def reply_audio(filename):
     else:
         return jsonify({"error": "File not found"}), 404
 
-def process_and_save_conversation(app_context, conversation_history, audio_paths, initial_time_str, user_id):
+def process_and_save_conversation(app_context, conversation_history, audio_paths, initial_time_str, user_id, uname):
     with app_context:
         print(f"Background thread started for user_id: {user_id}")
         if not conversation_history:
@@ -417,7 +417,7 @@ def process_and_save_conversation(app_context, conversation_history, audio_paths
                     filelist_path = f_list.name
 
                 if os.path.getsize(filelist_path) > 0:
-                    final_wav_name = safe_filename('final')
+                    final_wav_name = safe_filename(f'{uname}_processed')
                     final_path = os.path.join(AUDIO_LOG_DIR, final_wav_name)
                     
                     try:
@@ -497,11 +497,12 @@ def cleanup():
     initial_time = session.get('initial_time')
     user_id = session.get('user_id')
     audio_paths = session.get('audio_paths', []).copy()  # FIX: Create a copy of audio paths
+    user_name = session.get('username')
 
     if conversation_history and initial_time and user_id and audio_paths:
         background_task = threading.Thread(
             target=process_and_save_conversation,
-            args=(app.app_context(), conversation_history, audio_paths, initial_time, user_id)
+            args=(app.app_context(), conversation_history, audio_paths, initial_time, user_id, user_name)
         )
         background_task.start()
     else:
