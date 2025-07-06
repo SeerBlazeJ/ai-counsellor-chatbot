@@ -4,7 +4,7 @@
 This AI Counselor Chatbot is a secure web application that provides conversational AI services with speech recognition and text-to-speech capabilities. The application features user authentication, session management, and encrypted data storage.
 
 ## Demo of th software
-[![Video Title](https://img.youtube.com/vi/VIDEO_ID/0.jpg)](https://youtu.be/gLxJVUZX6qg)
+[![Video Title](https://img.youtube.com/vi/gLxJVUZX6qg/0.jpg)](https://youtu.be/gLxJVUZX6qg)
 
 
 ## Prerequisites
