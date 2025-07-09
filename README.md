@@ -17,7 +17,7 @@ Before installation, ensure your system has:
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/ai-counselor-chatbot.git
+git clone https://github.com/SeerBlazeJ/ai-counselor-chatbot.git
 cd ai-counselor-chatbot
 ```
 
